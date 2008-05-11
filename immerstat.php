@@ -2,13 +2,46 @@
 /*
 Plugin Name: ImmerStat
 Plugin URI: http://scompt.com/projects/immerstat
-Description: Replaces the Flash-based WordPress.com stats display on the dashboard with an ever-present .PNG in the top-right corner.
+Description: ImmerStat places a .PNG in the top-right corner of your admin screen with your current WordPress.com pageview statistics.
 Author: Edward Dale
 Author URI: http://scompt.com/
 Version: 0.5
 */
 
+/**
+ * ImmerStat places a .PNG in the top-right corner of your admin screen with 
+ * your current WordPress.com pageview statistics.
+ *
+ * LICENSE
+ * This file is part of ImmerStat.
+ *
+ * ImmerStat is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ * @package    ImmerStat
+ * @author     Edward Dale <scompt@scompt.com>
+ * @copyright  Copyright 2008 Edward Dale
+ * @license    http://www.gnu.org/licenses/gpl.txt GPL 2.0
+ * @version    $Id:$
+ * @link       http://www.scompt.com/projects/immerstat
+ * @since      0.5
+ */
 class ImmerStat {
+    
+    // Whether to regenerate stats
+    var $do_load = False;
+    
     /**
      * Make sure we've got all we need to run and the run.
      */
@@ -17,26 +50,40 @@ class ImmerStat {
             $this->load();
         }
     }
+    
+    /**
+     * A filter hook used to pick up on whether new stats were downloaded.
+     */
+    function enable_load($ret) {
+        $this->do_load = True;
+        return $ret;
+    }
 
     /**
      * Gets the view count from the WordPress.com Stats plugin and saves it
      * in a form that we can use later in the footer.
-     *
-     * TODO: If the stats haven't changed, don't do all this stuff.
      */
     function load() {
         $num_days = apply_filters('immerstat_days', 30);
+
+        // Use this filter to determine when new stats were actually retrieved
+        add_filter('update_option_stats_cache', array(&$this, 'enable_load'));
         $from_wp = stats_get_csv('views', array('days'=>$num_days, 'limit'=>$num_days, 'summarize'=>false));
+        remove_filter('update_option_stats_cache', array(&$this, 'enable_load'));
+
         $data = array();
         $max = $min = $from_wp[0]['views'];
-        foreach( $from_wp as $day ) {
-            if( $max<$day['views'] ) $max=$day['views'];
-            if( $min>$day['views'] ) $min=$day['views'];
-            $data []= $day['views'];
-        }
 
-        $stats = array('data'=>implode($data, ','), 'min'=>$min, 'max'=>$max, 'days'=>$num_days, 'current'=>$data[count($data)-1]);
-        update_option('immerstat_data', $stats);
+        if( $this->do_load ) {
+            foreach( $from_wp as $day ) {
+                if( $max<$day['views'] ) $max=$day['views'];
+                if( $min>$day['views'] ) $min=$day['views'];
+                $data []= $day['views'];
+            }
+
+            $stats = array('data'=>implode($data, ','), 'min'=>$min, 'max'=>$max, 'days'=>$num_days, 'current'=>$data[count($data)-1]);
+            update_option('immerstat_data', $stats);
+        }
 
         add_action('admin_footer', array(&$this, 'footer'));
         add_filter( 'wp_dashboard_widgets', array(&$this,'remove_dashboard_widget'), 11, 1);
