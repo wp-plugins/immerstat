@@ -1,7 +1,7 @@
 === ImmerStat ===
 Contributors: scompt
 Donate link: http://scompt.com/projects/immerstat
-Tags: stats wordpress admin
+Tags: stats, wordpress, admin
 Requires at least: 2.2
 Tested up to: 2.5
 Stable tag: 0.5
@@ -45,7 +45,7 @@ Email [me](mailto:scompt@scompt.com).
 
 == Screenshots ==
 
-1. None yet
+1. ImmerStat adds a small .PNG to the top-right corner of your admin screen.
 
 == Future Plans ==
 
