@@ -2,19 +2,15 @@
 Contributors: scompt
 Donate link: http://scompt.com/projects/immerstat
 Tags: stats, wordpress, admin
-Requires at least: 2.2
-Tested up to: 2.5
-Stable tag: 0.5
+Requires at least: 2.7
+Tested up to: 2.8
+Stable tag: 0.6
 
-ImmerStat places a .PNG in the top-right corner of your admin screen with your current WordPress.com pageview statistics.
+ImmerStat places an image in the header of your admin screen with your current WordPress.com pageview statistics.
 
 == Description ==
 
-ImmerStat places a .PNG in the top-right corner of your admin screen with your current WordPress.com pageview statistics.  You must also have the [WordPress.com Stats plugin](http://wordpress.org/extend/plugins/stats/) installed and configured.  The graphic is provided using the [Google Charts API](http://code.google.com/apis/chart/).
-
-It also removes the WordPress.com Stats panel from the dashboard.  If you want to see all the information that WordPress.com Stats provides, you can still go to that subpage.  Your dashboard no longer has any Flash elements on it!
-
-ImmerStat has been tested in WordPress 2.5.  It should work in versions 2.3 and 2.2, but it hasn't been tested there.  Please let [me](mailto:scompt@scompt.com) know if there are any problems.
+ImmerStat places an image in the header of your admin screen with your current WordPress.com pageview statistics.  You must also have the [WordPress.com Stats plugin](http://wordpress.org/extend/plugins/stats/) installed and configured.  The graphic is provided using the [Google Charts API](http://code.google.com/apis/chart/).
 
 == Installation ==
 
@@ -23,11 +19,7 @@ ImmerStat has been tested in WordPress 2.5.  It should work in versions 2.3 and 
 
 == Configuration ==
 
-There's no Options/Settings panel for ImmerStat.  Instead, a number of filter hooks are provided to change the default behavior.  Here's what they are.
-
-= immerstat_days =
-
-This is the number of days that should be displayed.  The default value is `30`.
+The number of days displayed in the image is controlled in the Miscellaneous Settings page.  The default value is 30.  The rest of the options can be controlled using the following filter hooks:
 
 = immerstat_colors =
 
@@ -45,13 +37,20 @@ Email [me](mailto:scompt@scompt.com).
 
 == Screenshots ==
 
-1. ImmerStat adds a small .PNG to the top-right corner of your admin screen.
+1. ImmerStat adds a small image to the header of your admin screen.
 
 == Future Plans ==
 
 * Dunno, any ideas?
 
 == Version History ==
+
+= Version 0.6 =
+
+* Updated for WordPress 2.7/2.8
+* Now shows an image that fits into the empty space in the middle of the admin header
+* Moved days setting to Settings page
+* Won't show warning if there's no data
 
 = Version 0.5 =
 

@@ -2,14 +2,15 @@
 /*
 Plugin Name: ImmerStat
 Plugin URI: http://scompt.com/projects/immerstat
-Description: ImmerStat places a .PNG in the top-right corner of your admin screen with your current WordPress.com pageview statistics.
+Description: ImmerStat places an image in the header of your admin screen with 
+             your current WordPress.com pageview statistics.
 Author: Edward Dale
 Author URI: http://scompt.com/
-Version: 0.5
+Version: 0.6
 */
 
 /**
- * ImmerStat places a .PNG in the top-right corner of your admin screen with 
+ * ImmerStat places an image in the header of your admin screen with 
  * your current WordPress.com pageview statistics.
  *
  * LICENSE
@@ -33,7 +34,7 @@ Version: 0.5
  * @author     Edward Dale <scompt@scompt.com>
  * @copyright  Copyright 2008 Edward Dale
  * @license    http://www.gnu.org/licenses/gpl.txt GPL 2.0
- * @version    $Id:$
+ * @version    $Id$
  * @link       http://www.scompt.com/projects/immerstat
  * @since      0.5
  */
@@ -46,10 +47,35 @@ class ImmerStat {
      * Make sure we've got all we need to run and the run.
      */
     function ImmerStat() {
+		add_settings_section('immerstat_setting_section', 'ImmerStat', 
+		                     array(&$this, 'settings_section'), 'misc');
+		add_settings_field('immerstat_days', 'Number of Days', 
+		                   array(&$this, 'settings_field'), 
+		                   'misc', 'immerstat_setting_section');
+		register_setting('misc', 'immerstat_days');
+		add_option('immerstat_days', 30);
+        
         if( function_exists('stats_get_csv') && current_user_can( 'manage_options' ) ) {
             $this->load();
         }
     }
+
+	/**
+	 * There's not much to say at the top of the ImmerStats section.
+	 */
+	function settings_section() {
+		// NOOP
+	}
+
+	/**
+	 * Shows the input field for the number of days.
+	 */
+	function settings_field() {
+		$days = get_option('immerstat_days');
+
+		echo "<input name='immerstat_days' id='immerstat_days' type='text'
+		value='".$days."' class='code' />";		
+	}
     
     /**
      * A filter hook used to pick up on whether new stats were downloaded.
@@ -64,63 +90,72 @@ class ImmerStat {
      * in a form that we can use later in the footer.
      */
     function load() {
-        $num_days = apply_filters('immerstat_days', 30);
+        $num_days = get_option('immerstat_days');
+		$old_data = get_option('immerstat_data');
 
         // Use this filter to determine when new stats were actually retrieved
         add_filter('update_option_stats_cache', array(&$this, 'enable_load'));
-        $from_wp = stats_get_csv('views', array('days'=>$num_days, 'limit'=>$num_days, 'summarize'=>false));
+        $from_wp = stats_get_csv('views', array(     'days'=>$num_days, 
+                                                    'limit'=>$num_days, 
+                                                'summarize'=>false));
         remove_filter('update_option_stats_cache', array(&$this, 'enable_load'));
 
         $data = array();
         $max = $min = $from_wp[0]['views'];
 
-        if( $this->do_load ) {
+        if( $this->do_load || (isset($old_data['days']) && 
+                               $old_data['days'] != $num_days) ) {
             foreach( $from_wp as $day ) {
                 if( $max<$day['views'] ) $max=$day['views'];
                 if( $min>$day['views'] ) $min=$day['views'];
                 $data []= $day['views'];
             }
 
-            $stats = array('data'=>implode($data, ','), 'min'=>$min, 'max'=>$max, 'days'=>$num_days, 'current'=>$data[count($data)-1]);
+            $stats = array('data'=>implode($data, ','), 'min'=>$min, 
+                           'max'=>$max, 'days'=>$num_days, 
+                           'current'=>$data[count($data)-1]);
             update_option('immerstat_data', $stats);
         }
 
-        add_action('admin_footer', array(&$this, 'footer'));
-        add_filter( 'wp_dashboard_widgets', array(&$this,'remove_dashboard_widget'), 11, 1);
-    }
-
-    /**
-     * Removes the WordPress.com Stats widget from the dashboard.
-     */
-    function remove_dashboard_widget($widgets) {
-    	array_splice($widgets, array_search( "dashboard_stats", $widgets), 1 );
-        return $widgets;
+		// This filter gets called at a convenient place in the header
+        add_filter('favorite_actions', array(&$this, 'show_graph'));
     }
 
     /**
      * Figure out which colors to use, build the Google Charts API URL,
      * and echo it all out.
      */
-    function footer() {
+    function show_graph($ret) {
     	global $_wp_admin_css_colors;
 
         // Figure out a good color scheme to use.
     	$scheme_name = get_user_option('admin_color');
-    	if ( empty($scheme_name) || !isset($_wp_admin_css_colors[$scheme_name]) || $scheme_name =='fresh' ) {
-            $colors = array('bg'=>'E4F2FD', 'under'=>'2583AD', 'line'=>'D54E21');
-    	} else if( $scheme_name == 'classic' ) {
-            $colors = array('bg'=>'14568A', 'under'=>'CFEBF6', 'line'=>'D54E21');
+
+    	if ( empty($scheme_name) || !isset($_wp_admin_css_colors[$scheme_name]) ) {
+			if( $scheme_name == 'fresh' ) {
+	            $colors = array('bg'=>'E4F2FD', 'under'=>'2583AD', 'line'=>'D54E21');
+	    	} else { // if( $scheme_name == 'classic' ) {
+	            $colors = array('bg'=>'14568A', 'under'=>'CFEBF6', 'line'=>'D54E21');
+			}
     	} else {
             $colors = array('bg'=>'FF0000', 'under'=>'00FF00', 'line'=>'0000FF');
             $scheme = $_wp_admin_css_colors[$scheme_name];
-            for( $i=0; $i<3; $i++ ) {
-                if( isset( $scheme->colors[$i])) $colors[$i] = substr($scheme->colors[$i],1);
-            }
+
+			if( count($scheme->colors)>3 ) {
+				$colors['bg']    = substr($scheme->colors[0],1);
+				$colors['under'] = substr($scheme->colors[1],1);
+				$colors['line']  = substr($scheme->colors[2],1);
+			}
     	}    	
         $colors = apply_filters('immerstat_colors', $colors);
         
         $stats = get_option('immerstat_data');
-        $current_ratio = (float)(($stats['current']-$stats['min'])/($stats['max']-$stats['min']));
+
+		if( $stats['max']==$stats['min']) {
+			$current_ratio=0;
+		} else {
+	        $current_ratio = (float)(($stats['current']-$stats['min'])/($stats['max']-$stats['min']));
+		}
         $width = $stats['days']*4;
 
         $link_args = array('chm'  => "h,{$colors['line']},0,$current_ratio,0.5|B,{$colors['under']},0,0,0",
@@ -132,13 +167,18 @@ class ImmerStat {
                            'chds' => "{$stats['min']},{$stats['max']}" );
         
         $link_args = apply_filters('immerstat_img_link_args', $link_args);
-        $link = add_query_arg($link_args, 'http://chart.apis.google.com/chart?')        
-?>
-<script type="text/javascript">
-    var img = jQuery('<a href="index.php?page=stats"><img title="<?php echo $stats['current'] ?>" alt="<?php echo $stats['current'] ?>" style="position:absolute;top:35px;right:20px;" height="60" width="<?php echo $width ?>" src="<?php echo $link ?>" /></a>');
-    jQuery('#wphead').append(img);
-</script>
-<?php
+        $link = add_query_arg($link_args, 'http://chart.apis.google.com/chart?');
+
+		?><div id="immerstat" style="float:left">
+		<a href="index.php?page=stats">
+		<img title="<?php echo $stats['current'] ?>" 
+		     alt="<?php echo $stats['current'] ?>" 
+		     height="46" width="<?php echo $width ?>" 
+		     src="<?php echo $link ?>" />
+		</a></div><?php
+
+		// Don't break the filter
+		return $ret;
     }
 }
 
